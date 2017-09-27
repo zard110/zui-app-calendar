@@ -1,11 +1,12 @@
 (function($$, AlloyTouch, Transform) {
   const Colors = ['rgb(255, 99, 132)', 'rgb(255, 159, 64)', '#fff077', 'rgb(75, 192, 192)', 'rgb(54, 162, 235)', 'rgb(153, 102, 255)', '#515465']
+  const Body = $$.querySelector('body')
   const Wrapper = $$.getElementById('wrapper')
   const Scroller = $$.querySelector('.items')
   const Items = Scroller.querySelectorAll('.item')
   const DW = $$.body.scrollWidth
 
-  let clearMovingHandler = null
+  let clearMovingHandler = function() {}
   let touchStartTimestamp = 0
   let touchStartHorizontal = 0
   let current = 0
@@ -24,6 +25,9 @@
     max: 0,
     initialValue: getValue(),
     touchStart: onTouchStart,
+    touchMove: function(event) {
+      event.stopPropagation()
+    },
     touchEnd: onTouchEnd
   })
 
@@ -35,36 +39,45 @@
     max: 0,
     initialValue: 0,
     touchStart: function(event, value) {
+      event.stopPropagation()
+
       originHeight = parseInt(Wrapper.style.height, 10)
       if (isNaN(originHeight)) {
         originHeight = DW
       }
-      event.stopPropagation()
       return false
     },
     touchMove: function(event, value) {
+      event.stopPropagation()
+
       let height = originHeight + value
-      if (height > DW || height < .4 * DW) {
+
+      if (height > DW || height < .3 * DW) {
         return false
       }
 
-      Wrapper.style.height = height + 'px'
-      Wrapper.style.fontSize =  (128 * height / DW < 42) ? '42px' : (128 * height / DW + 'px')
-      return false
-    },
-    touchEnd: function(event, value) {
-      let height = originHeight + value
-
-      if (height < .7 * DW) {
-        Wrapper.style.height = .4 * DW + 'px'
-        Wrapper.style.fontSize = '42px'
+      if (height < .5 * DW) {
+        Wrapper.style.fontSize = '64px'
       }
       else {
-        Wrapper.style.height = DW + 'px'
         Wrapper.style.fontSize = '128px'
       }
 
+      Wrapper.style.height = height + 'px'
+      return false
+    },
+    touchEnd: function(event, value) {
+      event.stopPropagation()
 
+      let height = originHeight + value
+
+      if (height < .5 * DW) {
+        Wrapper.style.height = .3 * DW + 'px'
+      }
+      else {
+        Wrapper.style.height = DW + 'px'
+      }
+      return false
     }
   })
 
@@ -84,38 +97,57 @@
   }
 
   function onTouchStart(event, value) {
-    clearTimeout(clearMovingHandler)
+    // event.stopPropagation()
+
+    clearMovingHandler()
     touchStartHorizontal = value
     touchStartTimestamp = fromNow()
   }
 
   function onTouchEnd(event, value) {
+    // event.stopPropagation()
+
     let toIndex
-    let time = getTime(touchStartHorizontal, value)
+    let timeout = getTimeout(touchStartHorizontal, value)
 
     if (fromNow(touchStartTimestamp) < 300) {
       toIndex = getDirectIndex(value)
-      time = 600
+      timeout = 600
     }
     else {
       toIndex = getCloseIndex(value)
     }
 
-    this.to(getValue(toIndex), time)
+    this.to(getValue(toIndex), timeout)
 
-    clearMovingHandler = setTimeout(() => {
-      if (!!toIndex) {
-        changeCurrentNumber(toIndex)
-        this.to(getValue(), 0)
-        changeOtherNumber()
-      }
-
-    }, time)
+    clearMovingHandler = cancelTimeout.call(this, toIndex, timeout)
 
     return false
   }
 
-  function getTime(startValue, endValue, time = 600, base = DW) {
+  function cancelTimeout(index, timeout) {
+    let handler = setTimeout(change.bind(this), timeout)
+
+    function change() {
+      handler = null
+      if (!!index) {
+        changeCurrentNumber(index)
+        this.to(getValue(), 0)
+        changeOtherNumber()
+      }
+    }
+
+    return function() {
+      clearTimeout(handler)
+
+      if (handler) {
+        this.to(getValue(index), 0)
+        change.call(this)
+      }
+    }.bind(this)
+  }
+
+  function getTimeout(startValue, endValue, time = 600, base = DW) {
     let value = Math.abs(endValue - startValue)
     base *= .5
 

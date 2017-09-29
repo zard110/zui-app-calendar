@@ -1,4 +1,4 @@
-(function($, $$, AlloyTouch, Transform) {
+(function ($, $$, AlloyTouch, Transform) {
   const Colors = ['rgb(255, 99, 132)', 'rgb(255, 159, 64)', '#fff077', 'rgb(75, 192, 192)', 'rgb(54, 162, 235)', 'rgb(153, 102, 255)', '#515465']
   const Body = $$.querySelector('body')
   const Header = $$.querySelector('#header')
@@ -7,15 +7,24 @@
   const Items = Scroller.querySelectorAll('.item')
   const DW = $$.body.scrollWidth
 
-  let clearMovingHandler = function() {}
+  let mode = 'week' // week
+  let clearMovingHandler = function () {
+  }
   let touchStartTimestamp = 0
   let touchStartHorizontal = 0
+  let weekHeight = 72
   let current = new Date()
 
   Transform(Scroller, true)
 
   changeCurrentNumber()
   changeOtherNumber()
+  showWeek(Items[1], mode === 'week')
+
+  weekHeight = $('table.calendar-dtable thead').eq(0).outerHeight() +
+    $('tr.calendar-first').eq(0).outerHeight() + 2
+
+  console.log(weekHeight)
 
   let alloyTouchHorizontal = new AlloyTouch({
     touch: '#wrapper',
@@ -27,7 +36,7 @@
     max: 0,
     initialValue: getValue(),
     touchStart: onTouchStart,
-    touchMove: function(event) {
+    touchMove: function (event) {
       event.stopPropagation()
     },
     touchEnd: onTouchEnd
@@ -40,7 +49,7 @@
     min: -0.5 * DW,
     max: 0,
     initialValue: 0,
-    touchStart: function(event, value) {
+    touchStart: function (event, value) {
       event.stopPropagation()
 
       originHeight = parseInt(Wrapper.style.height, 10)
@@ -49,38 +58,38 @@
       }
       return false
     },
-    touchMove: function(event, value) {
+    touchMove: function (event, value) {
       event.stopPropagation()
 
       let height = originHeight + value
 
-      if (height > DW || height < 78) {
+      if (height > DW || height < weekHeight) {
         return false
       }
 
       Wrapper.style.height = height + 'px'
       return false
     },
-    touchEnd: function(event, value) {
+    touchEnd: function (event, value) {
       event.stopPropagation()
 
       let height = originHeight + value
 
       if (value > 0 && height > 100) {
-        Wrapper.style.height = DW + 'px'
+        showWeek(Items[1], false, true)
         return false
       }
 
       if (value < 0 && height < .8 * DW) {
-        Wrapper.style.height = '78px'
+        showWeek(Items[1], true, true)
         return false
       }
 
       if (height < .5 * DW) {
-        Wrapper.style.height = '78px'
+        showWeek(Items[1], true, true)
       }
       else {
-        Wrapper.style.height = DW + 'px'
+        showWeek(Items[1], false, true)
       }
       return false
     }
@@ -100,7 +109,12 @@
   }
 
   function addMonth(date, offset) {
-    return moment(date).add(offset, 'months')._d;
+    if ('month' === mode) {
+      return moment(date).add(offset, 'months')._d
+    }
+    else if ('week' === mode) {
+      return moment(date).add(7 * offset, 'days')._d
+    }
   }
 
   function setHeader() {
@@ -110,13 +124,14 @@
   function setNumber(el, date) {
     if ($.data(el, 'calendar')) {
       $(el).calendar('moveTo', date)
+
     }
     else {
       $(el).calendar({
         current: date,
         width: DW,
         height: DW,
-        onChange: function(date) {
+        onChange: function (date) {
           if (el !== Items[1]) {
             return
           }
@@ -125,7 +140,31 @@
           setHeader()
           changeOtherNumber()
         }
-      });
+      })
+    }
+
+    showWeek(el, mode === 'week')
+  }
+
+  function showWeek(el, show = true, all = false) {
+    let tbody = $('.calendar-dtable tbody', el)
+    let tr = $('.calendar-selected', el).parent()
+    let index = tr.index()
+
+    if (show) {
+      mode = 'week'
+      Wrapper.style.height = weekHeight + 'px'
+      tbody[0].style.transform = 'translateY(-' + (index * tr.height()) + 'px)'
+    }
+    else {
+      mode = 'month'
+      Wrapper.style.height = DW + 'px'
+      tbody[0].style.transform = 'translateY(0)'
+    }
+
+    if (all) {
+      showWeek(Items[0], show)
+      showWeek(Items[2], show)
     }
   }
 
@@ -168,16 +207,17 @@
     let handler = setTimeout(change.bind(this), timeout)
 
     function change() {
+      Scroller.classList.remove('moving')
       handler = null
       if (!!index) {
         changeCurrentNumber(index)
         this.to(getValue(), 0)
         changeOtherNumber()
       }
-      Scroller.classList.remove('moving')
+
     }
 
-    return function() {
+    return function () {
       clearTimeout(handler)
 
       if (handler) {

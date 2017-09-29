@@ -67,7 +67,6 @@ body {
 .item.changing .calendar-body,
 .item:last-child .calendar-body,
 .item:first-child .calendar-body{
-  /*opacity: .9;*/
   background: rgba(255, 255, 255, .9);
   transition: none;
 }

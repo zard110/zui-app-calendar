@@ -53,9 +53,23 @@ body {
 .item {
   width: 100vw;
   display: flex;
+  flex-direction: column;
   justify-content: center;
   align-items: center;
   color: #fff;
   background: rgb(255, 99, 132);
 }
+
+.item .calendar-body {
+  transition: all .3s ease-in-out;
+}
+
+.item.changing .calendar-body,
+.item:last-child .calendar-body,
+.item:first-child .calendar-body{
+  /*opacity: .9;*/
+  background: rgba(255, 255, 255, .9);
+  transition: none;
+}
+
 

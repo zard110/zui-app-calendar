@@ -1,0 +1,25 @@
+#header {
+  height: 32px;
+  line-height: 32px;
+  font-size: 16px;
+  text-align: center;
+  color: #fff;
+  background: rgb(255, 99, 132);
+
+  transition-property: background;
+  transition-duration: 300ms;
+  transition-timing-function: cubic-bezier(0.1, 0.57, 0.1, 1);
+}
+
+.calendar {
+  border: none;
+  padding: 0;
+}
+
+.calendar-header {
+  display: none;
+}
+
+.calendar-body {
+  height: 100%!important;
+}

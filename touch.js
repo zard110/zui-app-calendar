@@ -1,6 +1,7 @@
-(function($$, AlloyTouch, Transform) {
+(function($, $$, AlloyTouch, Transform) {
   const Colors = ['rgb(255, 99, 132)', 'rgb(255, 159, 64)', '#fff077', 'rgb(75, 192, 192)', 'rgb(54, 162, 235)', 'rgb(153, 102, 255)', '#515465']
   const Body = $$.querySelector('body')
+  const Header = $$.querySelector('#header')
   const Wrapper = $$.getElementById('wrapper')
   const Scroller = $$.querySelector('.items')
   const Items = Scroller.querySelectorAll('.item')
@@ -9,11 +10,12 @@
   let clearMovingHandler = function() {}
   let touchStartTimestamp = 0
   let touchStartHorizontal = 0
-  let current = 0
+  let current = new Date()
 
   Transform(Scroller, true)
 
-  Items.forEach((el, index) => setNumber(el, index - 1))
+  changeCurrentNumber()
+  changeOtherNumber()
 
   let alloyTouchHorizontal = new AlloyTouch({
     touch: '#wrapper',
@@ -52,15 +54,8 @@
 
       let height = originHeight + value
 
-      if (height > DW || height < .3 * DW) {
+      if (height > DW || height < 78) {
         return false
-      }
-
-      if (height < .5 * DW) {
-        Wrapper.style.fontSize = '64px'
-      }
-      else {
-        Wrapper.style.fontSize = '128px'
       }
 
       Wrapper.style.height = height + 'px'
@@ -71,8 +66,18 @@
 
       let height = originHeight + value
 
+      if (value > 0 && height > 100) {
+        Wrapper.style.height = DW + 'px'
+        return false
+      }
+
+      if (value < 0 && height < .8 * DW) {
+        Wrapper.style.height = '78px'
+        return false
+      }
+
       if (height < .5 * DW) {
-        Wrapper.style.height = .3 * DW + 'px'
+        Wrapper.style.height = '78px'
       }
       else {
         Wrapper.style.height = DW + 'px'
@@ -81,31 +86,60 @@
     }
   })
 
-  function changeCurrentNumber(index) {
-    current += index
+  function changeCurrentNumber(index = 0) {
+    Items[1].classList.add('changing')
+    setHeader()
     setNumber(Items[1], current)
   }
 
   function changeOtherNumber() {
-    setNumber(Items[0], current - 1)
-    setNumber(Items[2], current + 1)
+    setNumber(Items[0], addMonth(current, -1))
+    setNumber(Items[2], addMonth(current, 1))
+
+    Items[1].classList.remove('changing')
   }
 
-  function setNumber(el, number) {
-    el.innerHTML = number
-    el.style.background = Colors[Math.abs(number) % Colors.length]
+  function addMonth(date, offset) {
+    return moment(date).add(offset, 'months')._d;
+  }
+
+  function setHeader() {
+    Header.innerHTML = moment(current).format('YYYY年 MM月')
+  }
+
+  function setNumber(el, date) {
+    if ($.data(el, 'calendar')) {
+      $(el).calendar('moveTo', date)
+    }
+    else {
+      $(el).calendar({
+        current: date,
+        width: DW,
+        height: DW,
+        onChange: function(date) {
+          if (el !== Items[1]) {
+            return
+          }
+
+          current = date
+          setHeader()
+          changeOtherNumber()
+        }
+      });
+    }
   }
 
   function onTouchStart(event, value) {
-    // event.stopPropagation()
+    event.stopPropagation()
 
     clearMovingHandler()
+    Scroller.classList.add('moving')
     touchStartHorizontal = value
     touchStartTimestamp = fromNow()
   }
 
   function onTouchEnd(event, value) {
-    // event.stopPropagation()
+    event.stopPropagation()
 
     let toIndex
     let timeout = getTimeout(touchStartHorizontal, value)
@@ -118,7 +152,12 @@
       toIndex = getCloseIndex(value)
     }
 
+    current = addMonth(current, toIndex)
+    setHeader()
+
+    // Header.style.background = Colors[Math.abs(current) % Colors.length]
     this.to(getValue(toIndex), timeout)
+
 
     clearMovingHandler = cancelTimeout.call(this, toIndex, timeout)
 
@@ -135,6 +174,7 @@
         this.to(getValue(), 0)
         changeOtherNumber()
       }
+      Scroller.classList.remove('moving')
     }
 
     return function() {
@@ -193,4 +233,4 @@
     return now ? time - now : time
   }
 
-})(document, AlloyTouch, Transform);
+})(jQuery, document, AlloyTouch, Transform);
